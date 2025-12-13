@@ -12,12 +12,12 @@ from ssd1306 import SSD1306_I2C
 
 
 #AUTO-V
-version = "v0.1-2025/12/13r41"
+version = "v0.1-2025/12/13r44"
 
 
 # PC server
 PC_IP = "192.168.1.201"
-PC_PORT = 9001
+PC_PORT = 9002
 
 
 
@@ -90,6 +90,7 @@ def connect_wifi():
 
 def connect_to_pc():
     """Connect to PC server"""
+    global sock
     try:
         # Create socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -210,6 +211,7 @@ def display_updater():
 
 
 def get_data():
+    global sock
     try:
         while True:
             try:
@@ -221,19 +223,7 @@ def get_data():
                     data = sock.recv(1024).decode('utf-8').strip()
                     if data:
                         try:
-                            # Parse data - may contain suffix like 'C' for CPU
-                            value_str = data
-                            suffix = ''
-                            
-                            # Check if last character is a letter (suffix)
-                            if value_str and value_str[-1].isalpha():
-                                suffix = value_str[-1].upper()
-                                value_str = value_str[:-1]
-                            
-                            # Convert to float and update shared variables
-                            cpu_usage = float(value_str)
-                            display_suffix = suffix
-                            debug_output("Received data: {}{}".format(cpu_usage, suffix))
+                            debug_output("Received data: {}{}".format(data))
                         except ValueError:
                             print("Invalid data received:", data)
                     else:
@@ -344,10 +334,10 @@ def main():
     #_thread.start_new_thread(display_updater, ())
 
     # Connect to WiFi
-    #connect_wifi()
+    connect_wifi()
 
     #get data from wifi
-    #get_data()
+    get_data()
 
 
 

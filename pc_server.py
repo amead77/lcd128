@@ -10,7 +10,7 @@ import threading
 import sys
 
 #AUTO-V
-version = "v0.1-2025/12/13r02"
+version = "v0.1-2025/12/13r04"
 
 
 
@@ -23,18 +23,8 @@ def get_cpu_usage():
         import psutil
         return int(psutil.cpu_percent(interval=0.1))
     except ImportError:
-        # Fallback to simple method
-        try:
-            result = subprocess.run(['top', '-bn1'], capture_output=True, text=True)
-            lines = result.stdout.split('\n')
-            for line in lines:
-                if line.startswith('Cpu(s):'):
-                    # Parse the first value (user CPU)
-                    cpu_line = line.split(',')[0]
-                    user_cpu = cpu_line.split(':')[1].strip()
-                    return int(float(user_cpu.split('%')[0]))
-        except:
-            return 0
+        # no fallback
+        return 0
 
 def get_ram_usage():
     """Get current RAM usage in gigabytes with 1 decimal point"""
@@ -45,19 +35,8 @@ def get_ram_usage():
         used_gb = used_bytes / (1024.0 ** 3)
         return round(used_gb, 1)
     except ImportError:
-        # Fallback to simple method
-        try:
-            result = subprocess.run(['free', '-b'], capture_output=True, text=True)
-            lines = result.stdout.split('\n')
-            for line in lines:
-                if line.startswith('Mem:'):
-                    # Parse memory usage in bytes
-                    parts = line.split()
-                    used_bytes = float(parts[2])
-                    used_gb = used_bytes / (1024.0 ** 3)
-                    return round(used_gb, 1)
-        except:
-            return 0.0
+        # no fallback
+        return 0.0
 
 def handle_client(client_socket, address, mode='cpu'):
     """Handle a connected client"""
@@ -66,31 +45,6 @@ def handle_client(client_socket, address, mode='cpu'):
         send_data=''
         toggle_counter = 0  # local counter: 4 * 0.25s = 1s
         while True:
-            # Get usage based on mode
-#            if mode == 'ram':
-#                usage = get_ram_usage()
-#                # RAM usage doesn't use suffix - keep decimal format
-#                data_to_send = "{}".format(usage)
-#                print("Sent RAM usage: {} GB".format(usage))
-#            elif mode == 'both':
-#                # Alternate between CPU and RAM every second
-#                if toggle:
-#                    usage = get_cpu_usage()
-#                    data_to_send = "{}C".format(usage)  # Suffix 'C' for CPU
-#                    print("Sent CPU usage: {}%".format(usage))
-#                else:
-#                    usage = get_ram_usage()
-#                    data_to_send = "{}".format(usage)  # RAM without suffix
-#                    print("Sent RAM usage: {} GB".format(usage))
-#                # increment local counter and flip every 4 loops (1 second)
-#                toggle_counter += 1
-#                if toggle_counter >= 4:
-#                    toggle = not toggle
-#                    toggle_counter = 0
-#            else:  # 'cpu' mode (default)
-#                usage = get_cpu_usage()
-#                data_to_send = "{}C".format(usage)  # Suffix 'C' for CPU
-#                print("Sent CPU usage: {}%".format(usage))
             match toggle_counter:
                 case 0: send_data = get_cpu_usage()
                 case 1: send_data = get_ram_usage()
@@ -113,27 +67,6 @@ def main():
     # Server configuration
     HOST = '192.168.1.201'  # Listen on all interfaces
     PORT = 9002
-    
-    # Parse command-line arguments
-#    mode = 'cpu'  # Default mode
-#    if len(sys.argv) > 1:
-#        arg = sys.argv[1].lower()
-#        if arg in ['cpu', 'ram', 'both']:
-#            mode = arg
-#            print("Mode: {} usage".format(arg.upper()))
-#        else:
-#            print("Invalid mode: {}".format(arg))
-#            print("Usage: python pc_server.py [cpu|ram|both]")
-#            print("  cpu:  CPU usage percentage (suffix 'C')")
-#            print("  ram:  RAM usage in GB (with decimal point)")
-#            print("  both: Alternates between CPU and RAM every second")
-#            return
-#    else:
-#        print("Mode: CPU usage (default)")
-#        print("Usage: python pc_server.py [cpu|ram|both]")
-#        print("  cpu:  CPU usage percentage (suffix 'C')")
-#        print("  ram:  RAM usage in GB (with decimal point)")
-#        print("  both: Alternates between CPU and RAM every second")
     
     # Create socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

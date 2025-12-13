@@ -12,7 +12,7 @@ from ssd1306 import SSD1306_I2C
 
 
 #AUTO-V
-version = "v0.1-2025/12/13r104"
+version = "v0.1-2025/12/13r111"
 
 
 # PC server
@@ -41,7 +41,7 @@ def connect_wifi():
     print('setup connecting to wifi')
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-
+    global sock
     retry_count = 0
     initial_retry_delay = 10  # First retry after 10 seconds
     subsequent_retry_delay = 30  # Subsequent retries after 30 seconds
@@ -95,7 +95,8 @@ def connect_to_pc():
         # Create socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(5.0)  # 5 second timeout
-
+        #sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1) # not supported in micropython
+        
         # Connect to PC server
         print('Connecting to PC server at {}:{}'.format(PC_IP, PC_PORT))
         sock.connect((PC_IP, PC_PORT))
@@ -144,8 +145,8 @@ def display_updater(display):
         try:
             debug_output("Updating display...")
             s_cpu_usage = str(cpu_usage)
-            s_ram_usage = str(ram_usage/1024)
-            s_ram_total = str(ram_total/1024)
+            s_ram_usage = str(ram_usage)
+            s_ram_total = str(ram_total)
             
             display.fill(0)
             display.text("CPU: "+s_cpu_usage+ "%", 0, 0)
@@ -179,7 +180,7 @@ def split_parts(data_recv):
         ram_usage = float(info.split("/")[0])
         ram_total = float(info.split("/")[1])
 
-        print("RAM usage: {:.2f}GB/{:.2f}GB".format(ram_usage/1024, ram_total/1024))
+        print("RAM usage: {:.2f}GB/{:.2f}GB".format(ram_usage, ram_total))
     else:
         print("Unknown part:", parts)
 
@@ -248,11 +249,13 @@ def get_data():
         #display.clear_display()
         if sock is not None:
             sock.close()
+            sock = None
     except Exception as e:
         print("Unexpected error:", e)
         #display.clear_display()
         if sock is not None:
             sock.close()
+            sock = None
 
 
 def draw_bar_graph(fbuf, value, x=0, y=0,box_width=127, box_height=20, show_scale=False):
@@ -302,6 +305,9 @@ def main():
     cpu_usage = 0.0
     ram_usage = 0.0
     ram_total = 0.0
+    # Initialize sock here
+    global sock
+    sock = None
 
     # Initialize display (for test loop)
     # Set up I2C and the pins we're using for it
@@ -321,9 +327,7 @@ def main():
     # Connect to WiFi
     connect_wifi()
 
-    # Initialize sock here
-    global sock
-    sock = None
+
 
     # Start the display updater thread
     _thread.start_new_thread(lambda: display_updater(display), ())

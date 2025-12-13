@@ -12,7 +12,7 @@ from ssd1306 import SSD1306_I2C
 
 
 #AUTO-V
-version = "v0.1-2025/12/13r30"
+version = "v0.1-2025/12/13r41"
 
 
 # PC server
@@ -112,22 +112,22 @@ def test_loop(display):
     display.fill(0) 
     
     for i in range(99):
-#        display.text("{:04d}".format(i), 0, 0)  # Display each number for 200ms
-#        display.hline(0,10,50, 255)
         display.fill(0) 
-        draw_bar_graph(display, i, 0, 0, True)
+        display.text("{:04d}".format(i), 0, 0)  # Display each number for 200ms
+        draw_bar_graph(display, i, 40, 0, 80, 20, True)
         display.show()
-        time.sleep(0.1)  # Display each number for 200ms
+        time.sleep(0.01)  # Display each number for 200ms
 
     for i in range(99, -1, -1):
 #        display.text("{:04d}".format(i), 0, 0)  # Display each number for 200ms
 #        display.hline(0,10,50, 255)
         display.fill(0) 
-        draw_bar_graph(display, i, 0, 0, True)
+        draw_bar_graph(display, i, 40, 0, 80, 20, True)
         display.show()
-        time.sleep(0.1)  # Display each number for 200ms
+        time.sleep(0.01)  # Display each number for 200ms
 
-
+    display.fill(0) 
+    display.show()
     print("Test loop completed.")
 
 def debug_output(output):
@@ -282,7 +282,7 @@ def get_data():
             sock.close()
 
 
-def draw_bar_graph(fbuf, value, x=0, y=0, show_scale=False):
+def draw_bar_graph(fbuf, value, x=0, y=0,box_width=127, box_height=20, show_scale=False):
     """
     Draw a box with a bar graph representation of a value (0-99) filling left to right.
     Optionally display scale markers left-to-right.
@@ -295,8 +295,8 @@ def draw_bar_graph(fbuf, value, x=0, y=0, show_scale=False):
         show_scale: Boolean indicating whether to show scale markers (default False)
     """
     # Box dimensions
-    box_width = 127
-    box_height = 20
+    #box_width = 127
+    #box_height = 20
     
     # clamping to constraints to prevent overflows
     if value > 99: value = 99

@@ -12,7 +12,7 @@ from ssd1306 import SSD1306_I2C
 
 
 #AUTO-V
-version = "v0.1-2025/12/13r44"
+version = "v0.1-2025/12/13r104"
 
 
 # PC server
@@ -117,15 +117,13 @@ def test_loop(display):
         display.text("{:04d}".format(i), 0, 0)  # Display each number for 200ms
         draw_bar_graph(display, i, 40, 0, 80, 20, True)
         display.show()
-        time.sleep(0.01)  # Display each number for 200ms
+        time.sleep(0.001)  # Display each number for 200ms
 
-    for i in range(99, -1, -1):
-#        display.text("{:04d}".format(i), 0, 0)  # Display each number for 200ms
-#        display.hline(0,10,50, 255)
-        display.fill(0) 
-        draw_bar_graph(display, i, 40, 0, 80, 20, True)
-        display.show()
-        time.sleep(0.01)  # Display each number for 200ms
+#    for i in range(99, -1, -1):
+#        display.fill(0) 
+#        draw_bar_graph(display, i, 40, 0, 80, 20, True)
+#        display.show()
+#        time.sleep(0.001)  # Display each number for 200ms
 
     display.fill(0) 
     display.show()
@@ -135,79 +133,67 @@ def debug_output(output):
     """Output debug information to console"""
     print("DEBUG:", output)
 
-def format_value_with_decimal_and_suffix(value, suffix=''):
-    """Format a float value into 4 digit display with decimal point and optional suffix
-    Formats as: XXX.X or XX.XX depending on value, or with hex suffix like C for CPU
-    Returns tuple: (digit0, digit1, digit2, digit3, dot_position)
-    dot_position: 0-3 for which digit gets the dot, or -1 for no dot
-    suffix: letter to replace last digit (e.g., 'C' for CPU or 'R' for RAM)
-    """
-    try:
-        val = float(value)
-        
-        # Handle suffix - replace the last digit position with the suffix letter
-        if suffix and suffix.upper() in '0123456789ABCDEF':
-            # Format with suffix replacing units position
-            if val >= 100:
-                # Format as XXX with suffix as last digit
-                formatted = int(val) % 1000
-                digit0 = formatted // 100
-                digit1 = (formatted % 100) // 10
-                digit2 = formatted % 10
-                # digit3 will be the suffix
-                suffix_val = ord(suffix.upper()) - ord('0') if suffix.isdigit() else ord(suffix.upper()) - ord('A') + 10
-                digit3 = suffix_val
-                dot_pos = -1
-            else:
-                # Format as XX with suffix as last digit
-                formatted = int(val) % 100
-                digit0 = 0
-                digit1 = formatted // 10
-                digit2 = formatted % 10
-                suffix_val = ord(suffix.upper()) - ord('0') if suffix.isdigit() else ord(suffix.upper()) - ord('A') + 10
-                digit3 = suffix_val
-                dot_pos = -1
-            
-            return (digit0, digit1, digit2, digit3, dot_pos)
-        else:
-            # Original behavior with decimal point
-            if val >= 100:
-                # Format as XXX (no decimal)
-                formatted = int(val) % 1000
-                digit0 = formatted // 100
-                digit1 = (formatted % 100) // 10
-                digit2 = formatted % 10
-                digit3 = 0
-                dot_pos = -1
-            else:
-                # Format as XX.X
-                formatted = int(val * 10) % 1000
-                digit0 = 0
-                digit1 = formatted // 100
-                digit2 = (formatted % 100) // 10
-                digit3 = formatted % 10
-                dot_pos = 2  # Dot on the tens position
-            
-            return (digit0, digit1, digit2, digit3, dot_pos)
-    except:
-        return (0, 0, 0, 0, -1)
 
-# Shared variable for CPU usage and optional suffix
-cpu_usage = None
-display_suffix = ''
 
-def display_updater():
+def display_updater(display):
     """Function to continuously update the display"""
-    global display_suffix
-
+    global cpu_usage
+    global ram_usage
+    global ram_total
     while True:
-        if cpu_usage is not None:
-            try:
-                digit0, digit1, digit2, digit3, dot_pos = format_value_with_decimal_and_suffix(cpu_usage, display_suffix)
-                
-            except Exception as e:
-                debug_output("Error updating display: {}".format(e))
-        time.sleep(0.1)  # Update every 100ms
+        try:
+            debug_output("Updating display...")
+            s_cpu_usage = str(cpu_usage)
+            s_ram_usage = str(ram_usage/1024)
+            s_ram_total = str(ram_total/1024)
+            
+            display.fill(0)
+            display.text("CPU: "+s_cpu_usage+ "%", 0, 0)
+            display.text("RAM: "+s_ram_usage+"GB/"+s_ram_total+"GB", 0, 17)
+            display.show()
+            time.sleep(1.000)  # Update screen rate
+        except KeyboardInterrupt:
+            break
+
+def split_parts(data_recv):
+    global cpu_usage
+    global ram_usage
+    global ram_total
+
+    data = data_recv.decode('utf-8')
+    data = str(data)
+    data = data.strip()
+    info, parts = '', ''
+    if ":" in data:
+        parts, info = data.split(":")
+    else:
+        info = ''
+        parts = ''
+
+    parts = parts.lower()
+    if parts == "cpu":
+        cpu_usage = float(info)
+        print("CPU usage: "+str(cpu_usage))
+    elif parts == "ram":
+        # ram contains used/total
+        ram_usage = float(info.split("/")[0])
+        ram_total = float(info.split("/")[1])
+
+        print("RAM usage: {:.2f}GB/{:.2f}GB".format(ram_usage/1024, ram_total/1024))
+    else:
+        print("Unknown part:", parts)
+
+# micropython doesn't support match/case :(
+#    match parts.lower():
+#        case "cpu":
+#            cpu_usage = float(parts.strip())
+#        case "ram":
+#            ram_usage = float(parts.strip())
+#        case _:
+#            print("Unknown part:", parts)
+
+    # returns for debugging    
+    return parts, info
 
 
 def get_data():
@@ -215,17 +201,24 @@ def get_data():
     try:
         while True:
             try:
+                if sock is None:
+                    print("sock is None, attempting to reconnect...")
+                    sock = connect_to_pc()
+                    continue
+
                 # Use select to check if there's data available
-                readable, _, _ = select.select([sock], [], [], 0.1)  # Timeout of 0.1 seconds
+                readable, _, _ = select.select([sock], [], [], 0.5)  # Timeout of 0.5 seconds
 
                 if sock in readable:
                     # Receive data from PC
-                    data = sock.recv(1024).decode('utf-8').strip()
+                    data = sock.recv(1024)
                     if data:
                         try:
-                            debug_output("Received data: {}{}".format(data))
+                            debug_output("Received data: "+str(split_parts(data)))
                         except ValueError:
                             print("Invalid data received:", data)
+                        
+                        #data = data.decode('utf-8').strip()
                     else:
                         # Empty data means server closed the connection
                         print("Server closed connection")
@@ -239,16 +232,6 @@ def get_data():
 
                 # Small delay to prevent excessive CPU usage
                 time.sleep(0.2)
-
-            except socket.error as e:
-                print("Socket error:", e)
-                print("Attempting to reconnect to PC server...")
-                sock = connect_to_pc()
-                while sock is None:
-                    print("Failed to reconnect to PC server, retrying in 20 seconds...")
-                    time.sleep(20)
-                    sock = connect_to_pc()
-                print("Reconnected to PC server")
 
             except Exception as e:
                 print("Error receiving data:", e)
@@ -312,8 +295,13 @@ def draw_bar_graph(fbuf, value, x=0, y=0,box_width=127, box_height=20, show_scal
 
 
 def main():
+    # globals for the display framebuffer
     global cpu_usage
-    global display_suffix
+    global ram_usage
+    global ram_total
+    cpu_usage = 0.0
+    ram_usage = 0.0
+    ram_total = 0.0
 
     # Initialize display (for test loop)
     # Set up I2C and the pins we're using for it
@@ -330,13 +318,17 @@ def main():
 
 
 
-    # Start the display updater thread
-    #_thread.start_new_thread(display_updater, ())
-
     # Connect to WiFi
     connect_wifi()
 
-    #get data from wifi
+    # Initialize sock here
+    global sock
+    sock = None
+
+    # Start the display updater thread
+    _thread.start_new_thread(lambda: display_updater(display), ())
+    print("Display updater started")
+    # Get data from wifi
     get_data()
 
 

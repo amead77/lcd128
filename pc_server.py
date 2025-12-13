@@ -11,7 +11,7 @@ import sys
 import psutil
 
 #AUTO-V
-version = "v0.1-2025/12/13r11"
+version = "v0.1-2025/12/13r13"
 
 
 
@@ -51,10 +51,11 @@ def handle_client(client_socket, address):
             match toggle_counter:
                 case 0: send_data = 'cpu:'+str(get_cpu_usage())
                 case 1: send_data = 'ram:'+str(get_ram_usage())+'/'+str(get_ram_total())
-
+            toggle_counter += 1
             if toggle_counter > 1: toggle_counter = 0
 
             # Send to rpi
+            print("Sending data:", send_data)
             client_socket.send("{}\r\n".format(send_data).encode())
             
             # Wait before next update

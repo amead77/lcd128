@@ -11,7 +11,7 @@ import sys
 import psutil
 
 #AUTO-V
-version = "v0.1-2025/12/14r15"
+version = "v0.1-2025/12/14r16"
 
 
 
@@ -40,12 +40,9 @@ def get_disk_io():
     disk_io_after = psutil.disk_io_counters()
     read_bytes = disk_io_after.read_bytes - disk_io_before.read_bytes
     write_bytes = disk_io_after.write_bytes - disk_io_before.write_bytes
-    return round(read_bytes + write_bytes, 1)
-#    '''Get current disk read/write in megabytes'''
-#    disk_io = psutil.disk_io_counters()
-#    read_mb = disk_io.read_bytes / (1024 ** 2)
-#    write_mb = disk_io.write_bytes / (1024 ** 2)
-#    return round(read_mb+write_mb, 1) # send together as total
+    read_bytes = round(read_bytes) * 4
+    write_bytes = round(write_bytes) * 4 # Multiply by 4 to guesstimate per second rate
+    return int(read_bytes + write_bytes)
 
 def get_ram_total():
     ram = psutil.virtual_memory()

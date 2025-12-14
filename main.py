@@ -3,6 +3,7 @@
 # TODO: think about moving everything into a class instead of using globals.
 
 #from os import close
+import re
 import network
 #from pc_server import get_cpu_usage
 import socket
@@ -16,7 +17,7 @@ from ssd1306 import SSD1306_I2C
 
 #version date and revision is updated by version update, must use ", not '
 #AUTO-V
-version = "v0.1-2025/12/14r50"
+version = "v0.1-2025/12/14r66"
 
 # Do printing of debug data. network info bypasses debug and prints anyway.
 C_DEBUG = False
@@ -157,6 +158,14 @@ def display_updater(display):
                 #s_ram_usage = str(ram_usage)
                 #s_ram_total = str(ram_total)
                 
+                ram_total = round(ram_total)
+                ram_usage = round(ram_usage)
+                disk_usage = disk_usage / 1024
+                disk_usage = int(disk_usage)
+                cpu_usage = round(cpu_usage)
+                gpu_usage = round(gpu_usage)
+                vram_usage = round(vram_usage)
+
                 # Simple thread locking, to prevent get_data from calling before this is finished
                 lock = True
                 display.fill(0)
@@ -175,13 +184,6 @@ def display_updater(display):
                     pc_ram = (ram_usage / ram_total) * 100
                     draw_bar_graph(display, pc_ram-1, C_BAR_STARTX, textpos, C_BAR_WIDTH, C_BAR_HEIGHT, True)
                 
-                #display.text('Disk: '+str(disk_usage), 0, 40)
-                
-                # bar graph disabled for now, until i work out the max throughput of my drives
-                #pc_disk = 0
-                #if disk_usage > 0:
-                #    pc_disk = (disk_usage / 10000) * 100
-                #draw_bar_graph(display, pc_disk-1, 40, 40, 80, 15, True)
                 textpos = C_TEXT_VERTSPACE * 2
                 #display.text('GPU: '+str(gpu_usage), 0, textpos)
                 display.text('GPU', 0, textpos)
@@ -197,6 +199,15 @@ def display_updater(display):
                     pc_vram = (vram_usage / vram_total) * 100
                     draw_bar_graph(display, pc_vram-1, C_BAR_STARTX, textpos, C_BAR_WIDTH, C_BAR_HEIGHT, True)
 
+
+                textpos = C_TEXT_VERTSPACE * 4
+                display.text('Disk: '+str(disk_usage), 0, textpos)
+                
+                # bar graph disabled for now, until i work out the max throughput of my drives
+                #pc_disk = 0
+                #if disk_usage > 0:
+                #    pc_disk = (disk_usage / 10000) * 100
+                #draw_bar_graph(display, pc_disk-1, 40, 40, 80, 15, True)
 
 
                 display.show()
@@ -278,8 +289,19 @@ def close_sock():
         print('Closing socket...')
         sock.close()
 
+
+def breakdown_recv_data(data):
+    recv_data = ''
+    recv_data_remainder = ''
+    recv_data = data.split(b'\n')[0]
+    recv_data_remainder = data.split(b'\n')[1]
+    return recv_data
+
 def get_data():
     global sock
+    buffer = ''
+    recv_data = ''
+    received_string = ''
     try:
         while True:
             try:
@@ -305,6 +327,7 @@ def get_data():
 
                 # Small delay to prevent excessive CPU usage
                 time.sleep(0.05)
+
 
             except Exception as e:
                 sock = None  # Set sock to None to trigger reconnection attempt

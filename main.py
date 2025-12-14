@@ -12,7 +12,7 @@ from ssd1306 import SSD1306_I2C
 
 
 #AUTO-V
-version = "v0.1-2025/12/14r00"
+version = "v0.1-2025/12/14r05"
 
 
 # PC server
@@ -141,20 +141,34 @@ def display_updater(display):
     global cpu_usage
     global ram_usage
     global ram_total
+    global lock
+
     while True:
-        try:
-            debug_output("Updating display...")
-            s_cpu_usage = str(cpu_usage)
-            s_ram_usage = str(ram_usage)
-            s_ram_total = str(ram_total)
-            
-            display.fill(0)
-            display.text("CPU: "+s_cpu_usage+ "%", 0, 0)
-            display.text("RAM: "+s_ram_usage+"GB/"+s_ram_total+"GB", 0, 17)
-            display.show()
-            time.sleep(1.000)  # Update screen rate
-        except KeyboardInterrupt:
-            break
+        if not lock:
+            try:
+                debug_output("Updating display...")
+                s_cpu_usage = str(cpu_usage)
+                s_ram_usage = str(ram_usage)
+                s_ram_total = str(ram_total)
+                
+                lock = True
+                display.fill(0)
+                #display.text("CPU: "+s_cpu_usage+ "%", 0, 0)
+                #display.text("RAM: "+s_ram_usage+"GB/"+s_ram_total+"GB", 0, 17)
+                display.text("CPU", 0, 0)
+                display.text("RAM", 0, 22)
+                # ram usage as a percent of ram total
+                pc_ram = ram_usage / ram_total * 100
+                draw_bar_graph(display, pc_ram-1, 40, 0, 80, 20, True)
+
+
+                display.show()
+                time.sleep(1.000)  # Update screen rate
+                lock = False
+            except KeyboardInterrupt:
+                break
+        else:
+            debug_output('LOCK')
 
 def split_parts(data_recv):
     global cpu_usage
@@ -223,13 +237,13 @@ def get_data():
                     else:
                         # Empty data means server closed the connection
                         print("Server closed connection")
-                        print("Attempting to reconnect to PC server...")
-                        sock = connect_to_pc()
-                        while sock is None:
-                            print("Failed to reconnect to PC server, retrying in 20 seconds...")
-                            time.sleep(20)
-                            sock = connect_to_pc()
-                        print("Reconnected to PC server")
+                        #print("Attempting to reconnect to PC server...")
+                        #sock = connect_to_pc()
+                        #while sock is None:
+                        #    print("Failed to reconnect to PC server, retrying in 20 seconds...")
+                        #    time.sleep(20)
+                        #    sock = connect_to_pc()
+                        #print("Reconnected to PC server")
 
                 # Small delay to prevent excessive CPU usage
                 time.sleep(0.2)
@@ -310,7 +324,9 @@ def main():
     # Initialize sock here
     global sock
     sock = None
-
+    # simple locking for thread. machine doesn't support Lock
+    global lock
+    lock = False
     # Initialize display (for test loop)
     # Set up I2C and the pins we're using for it
     i2c=I2C(0,sda=Pin(0), scl=Pin(1), freq=400000)

@@ -16,7 +16,7 @@ from ssd1306 import SSD1306_I2C
 
 #version date and revision is updated by version update, must use ", not '
 #AUTO-V
-version = "v0.1-2025/12/14r37"
+version = "v0.1-2025/12/14r46"
 
 # Do printing of debug data. network info bypasses debug and prints anyway.
 C_DEBUG = True
@@ -32,9 +32,9 @@ C_FREQ = 400000
 
 # bar graph dimensions
 C_BAR_WIDTH = 80
-C_BAR_HEIGHT = 12
+C_BAR_HEIGHT = 10
 C_BAR_STARTX  = 40
-C_TEXT_VERTSPACE = 18
+C_TEXT_VERTSPACE = 14
 
 def safe_get_char(text, index):
     if index < len(text):
@@ -175,18 +175,18 @@ def display_updater(display):
                 display.fill(0)
 
                 textpos = 0
-                display.text('CPU', 0, 0)
+                display.text('CPU', 0, textpos)
                 pc_cpu = 0
-                if cpu_usage > 0:
+                if cpu_usage >= 0 and cpu_usage <= 100:
                     pc_cpu = (cpu_usage / 100) * 100
-                draw_bar_graph(display, pc_cpu-1, C_BAR_STARTX, textpos, C_BAR_WIDTH, C_BAR_HEIGHT, True)
+                    draw_bar_graph(display, pc_cpu-1, C_BAR_STARTX, textpos, C_BAR_WIDTH, C_BAR_HEIGHT, True)
                 
                 textpos = C_TEXT_VERTSPACE
-                display.text('RAM', 0, 22)
+                display.text('RAM', 0, textpos)
                 pc_ram = 0
                 if (ram_usage > 0) and (ram_total > 0):
                     pc_ram = (ram_usage / ram_total) * 100
-                draw_bar_graph(display, pc_ram-1, C_BAR_STARTX, textpos, C_BAR_WIDTH, C_BAR_HEIGHT, True)
+                    draw_bar_graph(display, pc_ram-1, C_BAR_STARTX, textpos, C_BAR_WIDTH, C_BAR_HEIGHT, True)
                 
                 #display.text('Disk: '+str(disk_usage), 0, 40)
                 
@@ -196,10 +196,21 @@ def display_updater(display):
                 #    pc_disk = (disk_usage / 10000) * 100
                 #draw_bar_graph(display, pc_disk-1, 40, 40, 80, 15, True)
                 textpos = C_TEXT_VERTSPACE * 2
-                display.text('GPU: '+str(gpu_usage), 0, 40)
+                #display.text('GPU: '+str(gpu_usage), 0, textpos)
+                display.text('GPU', 0, textpos)
+                if gpu_usage >= 0 and gpu_usage <= 100:
+                    draw_bar_graph(display, gpu_usage, C_BAR_STARTX, textpos, C_BAR_WIDTH, C_BAR_HEIGHT, True)
+
 
                 textpos = C_TEXT_VERTSPACE * 3
-                display.text('VRAM: '+str(vram_usage), 0, 60)
+                #display.text('VRAM: '+str(vram_usage), 0, textpos)
+                display.text('VRAM', 0, textpos)
+                pc_vram = 0
+                if (vram_usage >= 0) and (vram_total > 0):
+                    pc_vram = (vram_usage / vram_total) * 100
+                    draw_bar_graph(display, pc_vram-1, C_BAR_STARTX, textpos, C_BAR_WIDTH, C_BAR_HEIGHT, True)
+
+
 
                 display.show()
                 time.sleep(0.500)  # Update screen rate
@@ -219,6 +230,7 @@ def split_parts(data_recv):
     global disk_usage
     global gpu_usage
     global vram_usage
+    global vram_total
 
     data = data_recv.decode('utf-8')
     data = str(data)
@@ -253,8 +265,19 @@ def split_parts(data_recv):
         gpu_usage = float(info)
         debug_output('GPU usage: '+str(gpu_usage))
     elif parts == 'vram':
-        vram_usage = float(info)
-        debug_output('VRAM usage: '+str(vram_usage))
+        #vram_usage = float(info)
+        #debug_output('VRAM usage: '+str(vram_usage))
+        
+        # ram contains used/total
+        try:        
+            vram_usage = float(info.split('/')[0])
+            vram_total = float(info.split('/')[1])
+        except:
+            vram_total = 10
+            vram_usage = 0
+        debug_output('VRAM usage: {:.2f}GB/{:.2f}GB'.format(vram_usage, vram_total))
+
+
     else:
         debug_output('Unknown part:'+str(parts))
         #print('Unknown part:', parts)
@@ -366,12 +389,15 @@ def main():
     global disk_usage
     global gpu_usage
     global vram_usage
+    global vram_total
+
     cpu_usage = 0.0
     ram_usage = 0.0
     ram_total = 0.0
     disk_usage = 0.0
     gpu_usage = 0.0
     vram_usage = 0.0
+    vram_total = 0.0
 
     # Initialize sock here
     global sock

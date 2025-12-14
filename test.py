@@ -14,18 +14,28 @@ def get_gpu_memory():
     gpu_memory = subprocess.run(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader"], capture_output=True)
     gpu_memory = gpu_memory.stdout.decode("utf-8").strip().split(' ')
     # tidy any whitespace, characters or symbols and convert to float
-    return gpu_memory[0]
+    return gpu_memory
     #return round(float(gpu_memory[0]), 1)
 
-
-
+def get_vram():
+    try:
+        # Get the output of nvidia-smi command with --query-gpu=utilization.memory option
+        out = subprocess.check_output(["nvidia-smi", "--query-gpu=utilization.memory", "--format=csv,noheader"]).decode('utf-8').strip()
+        
+        # The output is in percentage (%), so we don't need to convert it
+        return float(out)
+    except Exception as e:
+        print('Failed to get GPU memory utilization:', e)
+        return None
+    
 def main():
     gpu = get_gpu_utilization()
     vram = get_gpu_memory()
     print(f"GPU Utilization: {gpu}")
     print(f"VRAM Usage: {vram}")
 
-
+    vram = get_vram()
+    print(f"VRAM2 Usage: {vram}")
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ import sys
 import psutil
 
 #AUTO-V
-version = "v0.1-2025/12/14r10"
+version = "v0.1-2025/12/14r15"
 
 
 
@@ -62,6 +62,11 @@ def get_gpu_memory():
     gpu_memory = gpu_memory.stdout.decode("utf-8").strip().split(' ')
     return gpu_memory[0]
 
+def get_gpu_total_memory():
+    gpu_memory = subprocess.run(["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader"], capture_output=True)
+    gpu_memory = gpu_memory.stdout.decode("utf-8").strip().split(' ')
+    return gpu_memory[0]
+
 def handle_client(client_socket, address):
     '''Handle a connected client'''
     print('Client connected from:', address)
@@ -73,8 +78,8 @@ def handle_client(client_socket, address):
                 case 0: send_data = 'cpu:'+str(get_cpu_usage())
                 case 1: send_data = 'ram:'+str(get_ram_usage())+'/'+str(get_ram_total())
                 case 2: send_data = 'disk:'+str(get_disk_io())
-                case 3: send_data = 'gpu:'+str(get_gpu_usage())
-                case 4: send_data = 'vram:'+str(get_gpu_memory())
+                case 3: send_data = 'gpu:'+str(get_gpu_utilization())
+                case 4: send_data = 'vram:'+str(get_gpu_memory()+'/'+str(get_gpu_total_memory()))
                 
             # Send to rpi
             print('Sending data:', send_data)

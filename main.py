@@ -12,7 +12,7 @@ from ssd1306 import SSD1306_I2C
 
 
 #AUTO-V
-version = "v0.1-2025/12/14r05"
+version = "v0.1-2025/12/14r14"
 
 
 # PC server
@@ -158,12 +158,14 @@ def display_updater(display):
                 display.text("CPU", 0, 0)
                 display.text("RAM", 0, 22)
                 # ram usage as a percent of ram total
-                pc_ram = ram_usage / ram_total * 100
+                pc_ram = 0
+                if (ram_usage > 0) and (ram_total > 0):
+                    pc_ram = (ram_usage / ram_total) * 100
                 draw_bar_graph(display, pc_ram-1, 40, 0, 80, 20, True)
 
 
                 display.show()
-                time.sleep(1.000)  # Update screen rate
+                time.sleep(0.500)  # Update screen rate
                 lock = False
             except KeyboardInterrupt:
                 break

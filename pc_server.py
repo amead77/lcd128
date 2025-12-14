@@ -11,7 +11,7 @@ import sys
 import psutil
 
 #AUTO-V
-version = "v0.1-2025/12/13r13"
+version = "v0.1-2025/12/14r02"
 
 
 
@@ -35,6 +35,12 @@ def get_ram_usage():
         # no fallback
         return 0.0
 
+def get_disk_io():
+    """Get current disk read/write in megabytes"""
+    disk_io = psutil.disk_io_counters()
+    read_mb = disk_io.read_bytes / (1024 ** 2)
+    write_mb = disk_io.write_bytes / (1024 ** 2)
+    return round(read_mb+write_mb, 1) # send together as total
 
 def get_ram_total():
     ram = psutil.virtual_memory()
@@ -51,7 +57,8 @@ def handle_client(client_socket, address):
             match toggle_counter:
                 case 0: send_data = 'cpu:'+str(get_cpu_usage())
                 case 1: send_data = 'ram:'+str(get_ram_usage())+'/'+str(get_ram_total())
-            toggle_counter += 1
+                case 2: send_data = 'disk'+str(get_disk_io())
+            toggle_counter += 2
             if toggle_counter > 1: toggle_counter = 0
 
             # Send to rpi

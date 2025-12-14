@@ -12,7 +12,7 @@ from ssd1306 import SSD1306_I2C
 
 
 #AUTO-V
-version = "v0.1-2025/12/14r14"
+version = "v0.1-2025/12/14r19"
 
 
 # PC server
@@ -141,6 +141,7 @@ def display_updater(display):
     global cpu_usage
     global ram_usage
     global ram_total
+    global disk_usage
     global lock
 
     while True:
@@ -156,12 +157,23 @@ def display_updater(display):
                 #display.text("CPU: "+s_cpu_usage+ "%", 0, 0)
                 #display.text("RAM: "+s_ram_usage+"GB/"+s_ram_total+"GB", 0, 17)
                 display.text("CPU", 0, 0)
-                display.text("RAM", 0, 22)
                 # ram usage as a percent of ram total
+                pc_cpu = 0
+                if cpu_usage > 0:
+                    pc_cpu = (cpu_usage / 100) * 100
+                draw_bar_graph(display, pc_cpu-1, 40, 0, 80, 15, True)
+                
+                display.text("RAM", 0, 22)
                 pc_ram = 0
                 if (ram_usage > 0) and (ram_total > 0):
                     pc_ram = (ram_usage / ram_total) * 100
-                draw_bar_graph(display, pc_ram-1, 40, 0, 80, 20, True)
+                draw_bar_graph(display, pc_ram-1, 40, 20, 80, 15, True)
+                
+                display.text("Disk", 0, 40)
+                pc_disk = 0
+                if disk_usage > 0:
+                    pc_disk = (disk_usage / 10000) * 100
+                draw_bar_graph(display, pc_disk-1, 40, 40, 80, 15, True)
 
 
                 display.show()
@@ -176,6 +188,7 @@ def split_parts(data_recv):
     global cpu_usage
     global ram_usage
     global ram_total
+    global disk_usage
 
     data = data_recv.decode('utf-8')
     data = str(data)
@@ -195,8 +208,11 @@ def split_parts(data_recv):
         # ram contains used/total
         ram_usage = float(info.split("/")[0])
         ram_total = float(info.split("/")[1])
-
         print("RAM usage: {:.2f}GB/{:.2f}GB".format(ram_usage, ram_total))
+    elif parts == "disk":
+        disk_usage = float(info)
+        print("Disk usage: "+str(disk_usage))
+
     else:
         print("Unknown part:", parts)
 
@@ -320,9 +336,11 @@ def main():
     global cpu_usage
     global ram_usage
     global ram_total
+    global disk_usage
     cpu_usage = 0.0
     ram_usage = 0.0
     ram_total = 0.0
+    disk_usage = 0.0
     # Initialize sock here
     global sock
     sock = None

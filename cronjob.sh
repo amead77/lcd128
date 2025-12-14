@@ -6,7 +6,7 @@ PYTHON_SCRIPT="python3 ~/bin/pc_server.py"
 while :; do
     if ! tmux has-session -t $SESSION_NAME 2>/dev/null; then
         echo "Starting in tmux session '$SESSION_NAME'"
-        tmux new-session -d -s $SESSION_NAME "$PYTHON_SCRIPT both"
+        tmux new-session -d -s $SESSION_NAME "$PYTHON_SCRIPT"
     fi
 
     # Check every 60 seconds

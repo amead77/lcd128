@@ -11,7 +11,8 @@ import sys
 import psutil
 
 #AUTO-V
-version = "v0.1-2025/12/14r02"
+version = "v0.1-2025/12/14r04"
+
 
 
 
@@ -36,11 +37,17 @@ def get_ram_usage():
         return 0.0
 
 def get_disk_io():
-    """Get current disk read/write in megabytes"""
-    disk_io = psutil.disk_io_counters()
-    read_mb = disk_io.read_bytes / (1024 ** 2)
-    write_mb = disk_io.write_bytes / (1024 ** 2)
-    return round(read_mb+write_mb, 1) # send together as total
+    disk_io_before = psutil.disk_io_counters()
+    time.sleep(0.25)
+    disk_io_after = psutil.disk_io_counters()
+    read_bytes = disk_io_after.read_bytes - disk_io_before.read_bytes
+    write_bytes = disk_io_after.write_bytes - disk_io_before.write_bytes
+    return round(read_bytes + write_bytes, 1)
+#    """Get current disk read/write in megabytes"""
+#    disk_io = psutil.disk_io_counters()
+#    read_mb = disk_io.read_bytes / (1024 ** 2)
+#    write_mb = disk_io.write_bytes / (1024 ** 2)
+#    return round(read_mb+write_mb, 1) # send together as total
 
 def get_ram_total():
     ram = psutil.virtual_memory()
@@ -57,16 +64,17 @@ def handle_client(client_socket, address):
             match toggle_counter:
                 case 0: send_data = 'cpu:'+str(get_cpu_usage())
                 case 1: send_data = 'ram:'+str(get_ram_usage())+'/'+str(get_ram_total())
-                case 2: send_data = 'disk'+str(get_disk_io())
-            toggle_counter += 2
-            if toggle_counter > 1: toggle_counter = 0
+                case 2: send_data = 'disk:'+str(get_disk_io())
 
             # Send to rpi
             print("Sending data:", send_data)
             client_socket.send("{}\r\n".format(send_data).encode())
             
-            # Wait before next update
-            time.sleep(0.25)
+            # Wait before next update, unless disk because that already does it.
+            if toggle_counter != 2: time.sleep(0.25)
+
+            toggle_counter += 1
+            if toggle_counter == 3: toggle_counter = 0
             
     except Exception as e:
         print("Client error:", e)

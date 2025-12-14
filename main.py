@@ -12,7 +12,7 @@ from ssd1306 import SSD1306_I2C
 
 
 #AUTO-V
-version = "v0.1-2025/12/13r111"
+version = "v0.1-2025/12/14r00"
 
 
 # PC server
@@ -235,6 +235,7 @@ def get_data():
                 time.sleep(0.2)
 
             except Exception as e:
+                sock = None  # Set sock to None to trigger reconnection attempt
                 print("Error receiving data:", e)
                 # Attempt to reconnect
                 sock = connect_to_pc()
@@ -243,6 +244,7 @@ def get_data():
                     time.sleep(20)
                     sock = connect_to_pc()
                 print("Reconnected to PC server")
+            
 
     except KeyboardInterrupt:
         print("Stopping...")

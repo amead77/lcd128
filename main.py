@@ -16,10 +16,10 @@ from ssd1306 import SSD1306_I2C
 
 #version date and revision is updated by version update, must use ", not '
 #AUTO-V
-version = "v0.1-2025/12/14r46"
+version = "v0.1-2025/12/14r50"
 
 # Do printing of debug data. network info bypasses debug and prints anyway.
-C_DEBUG = True
+C_DEBUG = False
 
 # PC server
 PC_IP = '192.168.1.201'
@@ -35,19 +35,6 @@ C_BAR_WIDTH = 80
 C_BAR_HEIGHT = 10
 C_BAR_STARTX  = 40
 C_TEXT_VERTSPACE = 14
-
-def safe_get_char(text, index):
-    if index < len(text):
-        return text[index]
-    else:
-        return '0'  # Return '0' for missing characters
-
-def pad_with_zeros(text, length):
-    '''Pad string with leading zeros to specified length'''
-    if len(text) >= length:
-        return text
-    else:
-        return '0' * (length - len(text)) + text
 
 
 def connect_wifi():
@@ -302,7 +289,7 @@ def get_data():
                     continue
 
                 # Use select to check if there's data available
-                readable, _, _ = select.select([sock], [], [], 0.5)  # Timeout of 0.5 seconds
+                readable, _, _ = select.select([sock], [], [], 0.2)  # Timeout of 0.5 seconds
 
                 if sock in readable:
                     # Receive data from PC
@@ -317,7 +304,7 @@ def get_data():
                         print('Server closed connection')
 
                 # Small delay to prevent excessive CPU usage
-                time.sleep(0.2)
+                time.sleep(0.05)
 
             except Exception as e:
                 sock = None  # Set sock to None to trigger reconnection attempt

@@ -1,7 +1,7 @@
 # pc_server.py
 # this is the server part that runs on a linux pc and serves cpu or ram stats to the the pico w client.
-# by default it outputs cpu %, add 'ram' to the command line to output ram usage.
-# updated so 'both' on the cmd line switches context every second.
+# it uses nvidia-smi because i have a 4070ti and on linux.
+# on windows i don't know what to use. for AMD cards try using gpu_info. But you'll need to change the commands.
 #
 import socket
 import time
@@ -11,9 +11,7 @@ import sys
 import psutil
 
 #AUTO-V
-version = "v0.1-2025/12/14r05"
-
-
+version = "v0.1-2025/12/14r10"
 
 
 
@@ -54,6 +52,16 @@ def get_ram_total():
     ram_total = ram.total / (1024 ** 3)
     return round(ram_total, 1)
 
+def get_gpu_utilization():
+    gpu_utilization = subprocess.run(["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader"], capture_output=True)
+    gpu_utilization = gpu_utilization.stdout.decode("utf-8").strip().split(' ')
+    return gpu_utilization[0]
+
+def get_gpu_memory():
+    gpu_memory = subprocess.run(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader"], capture_output=True)
+    gpu_memory = gpu_memory.stdout.decode("utf-8").strip().split(' ')
+    return gpu_memory[0]
+
 def handle_client(client_socket, address):
     '''Handle a connected client'''
     print('Client connected from:', address)
@@ -65,7 +73,9 @@ def handle_client(client_socket, address):
                 case 0: send_data = 'cpu:'+str(get_cpu_usage())
                 case 1: send_data = 'ram:'+str(get_ram_usage())+'/'+str(get_ram_total())
                 case 2: send_data = 'disk:'+str(get_disk_io())
-
+                case 3: send_data = 'gpu:'+str(get_gpu_usage())
+                case 4: send_data = 'vram:'+str(get_gpu_memory())
+                
             # Send to rpi
             print('Sending data:', send_data)
             client_socket.send('{}\r\n'.format(send_data).encode())
@@ -74,7 +84,7 @@ def handle_client(client_socket, address):
             if toggle_counter != 2: time.sleep(0.25)
 
             toggle_counter += 1
-            if toggle_counter == 3: toggle_counter = 0
+            if toggle_counter == 5: toggle_counter = 0
             
     except Exception as e:
         print('Client error:', e)

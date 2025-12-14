@@ -2,7 +2,9 @@
 # TODO: switch from direct modify framebuffer to double buffer and blit.
 # TODO: think about moving everything into a class instead of using globals.
 
+#from os import close
 import network
+#from pc_server import get_cpu_usage
 import socket
 import time
 from machine import Pin, SPI, I2C
@@ -14,7 +16,7 @@ from ssd1306 import SSD1306_I2C
 
 #version date and revision is updated by version update, must use ", not '
 #AUTO-V
-version = "v0.1-2025/12/14r25"
+version = "v0.1-2025/12/14r37"
 
 # Do printing of debug data. network info bypasses debug and prints anyway.
 C_DEBUG = True
@@ -27,6 +29,12 @@ PC_PORT = 9002
 C_SDA = 0
 C_SCL = 1
 C_FREQ = 400000
+
+# bar graph dimensions
+C_BAR_WIDTH = 80
+C_BAR_HEIGHT = 12
+C_BAR_STARTX  = 40
+C_TEXT_VERTSPACE = 18
 
 def safe_get_char(text, index):
     if index < len(text):
@@ -149,41 +157,55 @@ def display_updater(display):
     global ram_usage
     global ram_total
     global disk_usage
+    global gpu_usage
+    global vram_usage
     global lock
 
     while True:
         if not lock:
             try:
-                debug_output('Updating display...')
+                #debug_output('Updating display...')
+                
                 #s_cpu_usage = str(cpu_usage)
                 #s_ram_usage = str(ram_usage)
                 #s_ram_total = str(ram_total)
                 
+                # Simple thread locking, to prevent get_data from calling before this is finished
                 lock = True
                 display.fill(0)
 
+                textpos = 0
                 display.text('CPU', 0, 0)
                 pc_cpu = 0
                 if cpu_usage > 0:
                     pc_cpu = (cpu_usage / 100) * 100
-                draw_bar_graph(display, pc_cpu-1, 40, 0, 80, 15, True)
+                draw_bar_graph(display, pc_cpu-1, C_BAR_STARTX, textpos, C_BAR_WIDTH, C_BAR_HEIGHT, True)
                 
+                textpos = C_TEXT_VERTSPACE
                 display.text('RAM', 0, 22)
                 pc_ram = 0
                 if (ram_usage > 0) and (ram_total > 0):
                     pc_ram = (ram_usage / ram_total) * 100
-                draw_bar_graph(display, pc_ram-1, 40, 20, 80, 15, True)
+                draw_bar_graph(display, pc_ram-1, C_BAR_STARTX, textpos, C_BAR_WIDTH, C_BAR_HEIGHT, True)
                 
-                display.text('Disk', 0, 40)
-                pc_disk = 0
-                if disk_usage > 0:
-                    pc_disk = (disk_usage / 10000) * 100
-                draw_bar_graph(display, pc_disk-1, 40, 40, 80, 15, True)
+                #display.text('Disk: '+str(disk_usage), 0, 40)
+                
+                # bar graph disabled for now, until i work out the max throughput of my drives
+                #pc_disk = 0
+                #if disk_usage > 0:
+                #    pc_disk = (disk_usage / 10000) * 100
+                #draw_bar_graph(display, pc_disk-1, 40, 40, 80, 15, True)
+                textpos = C_TEXT_VERTSPACE * 2
+                display.text('GPU: '+str(gpu_usage), 0, 40)
 
+                textpos = C_TEXT_VERTSPACE * 3
+                display.text('VRAM: '+str(vram_usage), 0, 60)
 
                 display.show()
                 time.sleep(0.500)  # Update screen rate
                 lock = False
+                if not _thread.get_ident():  # If the thread has exited, this will be None
+                    break
             except KeyboardInterrupt:
                 break
         else:
@@ -195,6 +217,8 @@ def split_parts(data_recv):
     global ram_usage
     global ram_total
     global disk_usage
+    global gpu_usage
+    global vram_usage
 
     data = data_recv.decode('utf-8')
     data = str(data)
@@ -225,6 +249,12 @@ def split_parts(data_recv):
         disk_usage = float(info)
         debug_output('Disk usage: '+str(disk_usage))
         #print('Disk usage: '+str(disk_usage))
+    elif parts == 'gpu':
+        gpu_usage = float(info)
+        debug_output('GPU usage: '+str(gpu_usage))
+    elif parts == 'vram':
+        vram_usage = float(info)
+        debug_output('VRAM usage: '+str(vram_usage))
     else:
         debug_output('Unknown part:'+str(parts))
         #print('Unknown part:', parts)
@@ -232,6 +262,11 @@ def split_parts(data_recv):
     # returns for debugging    
     return parts, info
 
+def close_sock():
+    global sock
+    if sock is not None:
+        print('Closing socket...')
+        sock.close()
 
 def get_data():
     global sock
@@ -276,15 +311,12 @@ def get_data():
     except KeyboardInterrupt:
         print('Stopping...')
         #display.clear_display()
-        if sock is not None:
-            sock.close()
-            sock = None
+        close_sock()
+
     except Exception as e:
         print('Unexpected error:', e)
         #display.clear_display()
-        if sock is not None:
-            sock.close()
-            sock = None
+        close_sock()
 
 
 def draw_bar_graph(fbuf, value, x=0, y=0,box_width=127, box_height=20, show_scale=False):
@@ -332,10 +364,15 @@ def main():
     global ram_usage
     global ram_total
     global disk_usage
+    global gpu_usage
+    global vram_usage
     cpu_usage = 0.0
     ram_usage = 0.0
     ram_total = 0.0
     disk_usage = 0.0
+    gpu_usage = 0.0
+    vram_usage = 0.0
+
     # Initialize sock here
     global sock
     sock = None
@@ -362,14 +399,32 @@ def main():
 
 
 
-    # Start the display updater thread
-    _thread.start_new_thread(lambda: display_updater(display), ())
-    debug_output('Display updater started')
-    #print('Display updater started')
+#    # Start the display updater thread
+#    _thread.start_new_thread(lambda: display_updater(display), ())
+#    debug_output('Display updater started')
+#    #print('Display updater started')
     
-    # Get data from wifi
-    get_data()
+#    # Get data from wifi
+#    get_data()
+    
 
+#    print('Exit the program')
+#    sys.exit(0)
+
+
+
+
+    # Start the display updater thread
+    thread = _thread.start_new_thread(display_updater, (display,))
+    debug_output('Display updater started')
+        
+    try:
+        get_data()
+    except KeyboardInterrupt:
+        print('Stopping...')
+        close_sock()
+        _thread.interrupted(thread)  # This will raise SystemExit if the thread is still running. i don't think this works on micropython
+        sys.exit(0)
 
 
 

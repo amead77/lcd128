@@ -17,7 +17,7 @@ from ssd1306 import SSD1306_I2C
 
 #version date and revision is updated by version update, must use ", not '
 #AUTO-V
-version = "v0.1-2025/12/14r59"
+version = "v0.1-2025/12/14r60"
 
 # Do printing of debug data. network info bypasses debug and prints anyway.
 C_DEBUG = False

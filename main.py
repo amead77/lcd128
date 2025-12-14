@@ -16,7 +16,7 @@ from ssd1306 import SSD1306_I2C
 
 #version date and revision is updated by version update, must use ", not '
 #AUTO-V
-version = "v0.1-2025/12/14r54"
+version = "v0.1-2025/12/14r56"
 
 # Do printing of debug data. network info bypasses debug and prints anyway.
 C_DEBUG = False
@@ -304,9 +304,9 @@ def get_data():
                     data = sock.recv(1024)
                     if data:
                         try:
-
+                            recv_data = breakdown_recv_data(data)
                             
-                            recv_data = split_parts(data)
+                            recv_data = split_parts(recv_data)
                             debug_output('Received data: '+str(recv_data))
                         except ValueError:
                             print('Invalid data received:', data)

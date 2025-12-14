@@ -3,6 +3,7 @@
 # TODO: think about moving everything into a class instead of using globals.
 
 #from os import close
+import re
 import network
 #from pc_server import get_cpu_usage
 import socket
@@ -16,7 +17,7 @@ from ssd1306 import SSD1306_I2C
 
 #version date and revision is updated by version update, must use ", not '
 #AUTO-V
-version = "v0.1-2025/12/14r56"
+version = "v0.1-2025/12/14r59"
 
 # Do printing of debug data. network info bypasses debug and prints anyway.
 C_DEBUG = False
@@ -288,6 +289,9 @@ def breakdown_recv_data(data):
 
 def get_data():
     global sock
+    buffer = ''
+    recv_data = ''
+    received_string = ''
     try:
         while True:
             try:
@@ -304,9 +308,23 @@ def get_data():
                     data = sock.recv(1024)
                     if data:
                         try:
-                            recv_data = breakdown_recv_data(data)
-                            
-                            recv_data = split_parts(recv_data)
+
+                            received_string = data     # Convert bytes to string
+                            received_string = received_string.decode('utf-8')
+                            debug_output("Received: " + received_string)
+
+                            buffer += received_string   # Add received data to the buffer
+
+                            while '\n' in buffer:  # While there are complete lines in the buffer
+                                line_end = buffer.index('\n')
+                                
+                                line = buffer[:line_end]  # Get the first complete line
+                                buffer = buffer[line_end+1:]  # Update the buffer without processed data
+
+                                recv_data = split_parts(line)  # Process each line separately
+
+                            #recv_data = breakdown_recv_data(data)
+                            #recv_data = split_parts(recv_data)
                             debug_output('Received data: '+str(recv_data))
                         except ValueError:
                             print('Invalid data received:', data)

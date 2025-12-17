@@ -14,8 +14,8 @@ it then displays some system info on the oled display.
 
 you'll need to create your own wifi_settings.py and copy that to your pico w, it's not on here to prevent accidentally uploading my credentials.\
 create this and have 2 constants in it only:\
--WIFI_SSID=<your network>\
--WIFI_PASSWORD=<your network password>\
+-WIFI_SSID=[your network]\
+-WIFI_PASSWORD=[your network password]\
 \
 Make sure you have psutils python module installed.
 
@@ -25,7 +25,7 @@ on the Pico W:
 - main.py
 - ssd1306.py
 - wifi_settings.py
-\
+
 
 on the PC (Linux):
 - pc_server.py

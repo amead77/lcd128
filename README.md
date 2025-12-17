@@ -19,13 +19,14 @@ create this and have 2 constants in it only:\
 \
 Make sure you have psutils python module installed.
 
-version_update.py wasn't supposed to be included, I use it internally to update version data. But again I forgot to add it to .gitignore, now it's here and can stay. I use it with RunOnSave in VS Code.
+version_update.py wasn't supposed to be included, I use it internally to update version data. But again I forgot to add it to .gitignore, now it's here and can stay. I use it with RunOnSave in VS Code.\
 
-on the Pico W:\
-- main.py\
-- ssd1306.py\
-- wifi_settings.py\
+on the Pico W:
+- main.py
+- ssd1306.py
+- wifi_settings.py
 \
-on the PC (Linux):\
-- pc_server.py\
-- cronjob.sh (optional, call how you like)\
+
+on the PC (Linux):
+- pc_server.py
+- cronjob.sh (optional, call how you like)
